@@ -1,0 +1,3 @@
+uniformeEsferico:
+32 muestras = Duración: 771709 milisegundos
+100 muestras = 

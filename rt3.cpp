@@ -8,7 +8,7 @@
 #include <unistd.h> // Para la función sleep
 #include <random>
 #include <iostream>
-#include <chrono>
+
 
 float GETNEXTRAND() {
     // Crea un generador de números aleatorios
@@ -330,7 +330,7 @@ Color shade(const Ray &r) {
 int main(int argc, char *argv[]) {
 	
 
-	int muestra = 100; // número de muestras
+	int muestra = 32; // número de muestras
 
 	int w = 1024, h = 768; // image resolution
   
@@ -347,7 +347,6 @@ int main(int argc, char *argv[]) {
 	// PROYECTO 1
 	// usar openmp para paralelizar el ciclo: cada hilo computara un renglon (ciclo interior),
 	int Porcentaje = 0; // variable para ver cuántas filas ya fueron procesadas
-    auto tiempoInicial = std::chrono::high_resolution_clock::now();
 	#pragma omp parallel for schedule(dynamic, 1)
 	for(int y = 0; y < h; y++) 
 	{ 
@@ -382,7 +381,7 @@ int main(int argc, char *argv[]) {
 
 	// PROYECTO 1
 	// Investigar formato ppm
-	FILE *f = fopen("uniformeEsferico_100.ppm", "w");
+	FILE *f = fopen("image.ppm", "w");
 	// escribe cabecera del archivo ppm, ancho, alto y valor maximo de color
 	fprintf(f, "P3\n%d %d\n%d\n", w, h, 255); 
 	for (int p = 0; p < w * h; p++) 
@@ -393,13 +392,6 @@ int main(int argc, char *argv[]) {
 	fclose(f);
 
 	delete[] pixelColors;
-
-    auto tiempoFinal = std::chrono::high_resolution_clock::now();
-
-    // Calcular la duración en milisegundos
-    auto duracion = std::chrono::duration_cast<std::chrono::milliseconds>(tiempoFinal - tiempoInicial).count();
-
-    std::cout << "Duración: " << duracion << " milisegundos\n";
 
 	
 
