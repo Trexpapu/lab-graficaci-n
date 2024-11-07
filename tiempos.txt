@@ -6,3 +6,7 @@ uniformeEsferico:
 
 uniformeHemisferico:
 32 muestras = Duración: 768136 milisegundos
+
+
+cosenoHemisferico:
+32 muestras = Duración: 767610 milisegundos
