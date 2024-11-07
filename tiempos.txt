@@ -1,4 +1,8 @@
 uniformeEsferico:
 32 muestras = Duración: 771709 milisegundos
 100 muestras = Duración: 2649235 milisegundos
-500 muestras = 
+350 muestras = 
+
+
+uniformeHemisferico:
+32 muestras = Duración: 768136 milisegundos
