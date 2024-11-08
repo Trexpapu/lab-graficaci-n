@@ -12,6 +12,6 @@ uniformeHemisferico:
 
 cosenoHemisferico:
 32 muestras = Duración: 767610 milisegundos
-
+100 muestras = Duración: 890512 milisegundoss
 500 muestras = Duración: 2268274 milisegundos
 
