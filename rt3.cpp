@@ -8,6 +8,7 @@
 #include <unistd.h> // Para la función sleep
 #include <random>
 #include <iostream>
+#include <chrono>
 
 
 float GETNEXTRAND() {
@@ -44,6 +45,10 @@ public:
 	
 	// normalizar vector 
 	Vector& normalize(){ return *this = *this * (1.0 / sqrt(x * x + y * y + z * z)); }
+
+	double dist(const Vector& other) const {
+        return sqrt(pow(x - other.x, 2) + pow(y - other.y, 2) + pow(z - other.z, 2));
+    }
 };
 typedef Vector Point;
 typedef Vector Color;
@@ -204,6 +209,11 @@ class MonteCarlo{
 	Vector n;
 	Sphere obj;
 
+	
+
+
+   
+
 	public:
 
 	MonteCarlo(Ray ray_, Point x_, Vector n_): ray(ray_), x(x_), n(n_), obj(0, Point(), Color(), Color()){}
@@ -272,12 +282,141 @@ class MonteCarlo{
 
 		Vector global = LocalesAGlobales(n, s, t, wi);
 
-		double costhetai = n.dot(global);
-		Color fr = sphere.c * (1 / M_PI);
+		double costhetai = n.dot(global); //como se veria si esto fuera solo igual a 1
+		Color fr = sphere.c * (0.22 / M_PI); // cambiar 1 a 0.65 para cambiar los materiales
 		Color cle = le(global);
 		Vector result = ((fr.mult(cle) * costhetai)) * (1 / pwj);
 		return result;
 	}
+
+//fuente de area
+
+   Vector fuenteArea(Sphere sphere){
+
+        Sphere fuente=spheres[7];
+         //Para polar (local)
+         double thetaj = acos(1-2 * GETNEXTRAND());
+         //Para azimutal (local)
+         double phij = 2 * M_PI * GETNEXTRAND();
+         //Probabilidad
+         //double pwj = cos(thetaj) / M_PI;
+    
+        //Convertimos de esfericas a cartesianas
+         Vector wo ((cos(phij) * sin(thetaj)),(sin(thetaj) * sin(phij)),cos(thetaj));
+         //Normalizar omega O
+         wo.normalize();
+
+        //obtener el rayo de la fuente 
+        //P punto de la fuente o posicion
+         Ray rayoEnFuente= Ray(fuente.p, wo);
+
+        //calcular x'
+
+         Point xPrima(rayoEnFuente.o + (rayoEnFuente.d * fuente.r));
+
+         //Ahora calculamos wi
+         Vector wi(xPrima - x);
+         //Distancia entre los puntos xPrima y x
+         double distEntrePuntos= xPrima.dist(x);
+         //Normalizar wi
+         wi.normalize();
+
+         //Ahora calculamos le() el rayo desde la fuente
+         //xPrima y wi Normalizada
+            double t2;
+            int id2;
+            Ray rayoDesdeFuente(xPrima, wi * (-1.0));
+
+            Color cle = Color();
+            intersect(rayoDesdeFuente, t2, id2);
+
+            if(id2==id2){
+                cle=fuente.emluz;
+            }
+
+            //Normal de la fuente
+            Vector normalEnFuente = Vector(xPrima - fuente.p).normalize();
+
+            //Coseno de la fuente
+            double cosEnFuente = normalEnFuente.dot(wi*(-1.0));
+
+            //Para saber si hay una interseccion con la misma fuente
+            if(cosEnFuente>1.0 || cosEnFuente<0.0){
+                cle = Color();
+            }
+
+            //Calculamos la probabilidad
+            double pw = (distEntrePuntos * distEntrePuntos) / 
+            (4.0*M_PI * (fuente.r* fuente.r) * cosEnFuente);
+
+            //Calculamos fr
+            Color fr = sphere.c * (1 / M_PI);
+            //CAlculamos thetai
+            double costhetai = n.dot(wi);
+
+            //Discriminamos valor negativos de costhetai los iguales a 0
+            if(costhetai<0.0){
+                costhetai=0.0;
+            }
+
+            //printf("le: %f %f %f\n", le.x, le.y, le.z);
+
+            //Calculamos la integral
+            Vector result= (fr.mult(cle) * costhetai) * (1 / pw);
+            return result;
+   }
+
+
+
+	Vector AnguloSolido(Sphere sphere) {	
+	
+			Sphere fuente = spheres[7];
+
+			// Calcular 
+			double thetaMAX = acos(sqrt(1 - pow((fuente.r)/(fuente.p.dist(x)) , 2)));
+			double r1 = GETNEXTRAND();
+			double thetaj = acos((1 - r1) + (r1 * cos(thetaMAX))); // Ángulo polar, modificado para hemisferio con distribución coseno
+			double phij = 2 * M_PI * GETNEXTRAND(); // Ángulo azimutal
+
+			Vector wo (
+				cos(phij) * sin(thetaj),
+				sin(phij) * sin(thetaj),
+				cos(thetaj)
+			);
+			wo.normalize();
+
+			Vector nw = (fuente.p - x).normalize();
+
+			Vector t, s;
+			coordinateSystem(nw, s, t);
+
+			Vector global = LocalesAGlobales(nw, s, t, wo);
+			Ray RayoHaciaEmisor(x, global);
+
+			double t2;
+			int id2;
+			Color le = Color();
+			if(intersect(RayoHaciaEmisor, t2, id2)){
+				if(id2 == 7){
+					le = fuente.emluz;
+				}
+			}
+
+			double pwj = (1 / (2 * M_PI * (1 - cos(thetaMAX))));
+			Color fr = sphere.c * (1 / M_PI);
+
+			double costhetai = n.dot(global);
+
+			if (costhetai < 0) {
+				costhetai = 0;
+			}
+
+			Vector result = ((fr.mult(le) * costhetai)) * (1 / pwj);
+
+			return result;
+		}
+
+
 
 
 	private: 
@@ -316,8 +455,13 @@ Color shade(const Ray &r) {
 	Vector n = (x - obj.p).normalize();
 
 	MonteCarlo monteCarlo(r, x, n);
+	//fuente de area
+	Color colorValue = monteCarlo.fuenteArea(obj) + obj.emluz;
 
-	Color colorValue = monteCarlo.uniformeEsferico(obj) + obj.emluz;
+	//angulo solido
+	//Color colorValue = monteCarlo.AnguloSolido(obj) + obj.emluz;
+
+	//Color colorValue = monteCarlo.uniformeEsferico(obj) + obj.emluz;
 
 	//Color colorValue = monteCarlo.uniformeHemisferico(obj) + obj.emluz;
 
@@ -330,7 +474,7 @@ Color shade(const Ray &r) {
 int main(int argc, char *argv[]) {
 	
 
-	int muestra = 32; // número de muestras
+	int muestra = 10; // número de muestras
 
 	int w = 1024, h = 768; // image resolution
   
@@ -347,6 +491,9 @@ int main(int argc, char *argv[]) {
 	// PROYECTO 1
 	// usar openmp para paralelizar el ciclo: cada hilo computara un renglon (ciclo interior),
 	int Porcentaje = 0; // variable para ver cuántas filas ya fueron procesadas
+
+	auto tiempoInicial = std::chrono::high_resolution_clock::now();
+
 	#pragma omp parallel for schedule(dynamic, 1)
 	for(int y = 0; y < h; y++) 
 	{ 
@@ -381,7 +528,7 @@ int main(int argc, char *argv[]) {
 
 	// PROYECTO 1
 	// Investigar formato ppm
-	FILE *f = fopen("image.ppm", "w");
+	FILE *f = fopen("fuente_area.ppm", "w");
 	// escribe cabecera del archivo ppm, ancho, alto y valor maximo de color
 	fprintf(f, "P3\n%d %d\n%d\n", w, h, 255); 
 	for (int p = 0; p < w * h; p++) 
@@ -393,7 +540,12 @@ int main(int argc, char *argv[]) {
 
 	delete[] pixelColors;
 
-	
+	auto tiempoFinal = std::chrono::high_resolution_clock::now();
+
+    // Calcular la duración en milisegundos
+    auto duracion = std::chrono::duration_cast<std::chrono::milliseconds>(tiempoFinal - tiempoInicial).count();
+
+    std::cout << "Duración: " << duracion << " milisegundos\n";
 
 	return 0;
 }
